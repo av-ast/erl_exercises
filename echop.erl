@@ -1,22 +1,31 @@
 -module(echop).
 
--export([init/0, ping/1]).
+-export([start/0, print/1, stop/0]).
 
-init() ->
+start() ->
   register(echop, spawn(fun loop/0)).
 
-ping(Message) ->
-  echop ! {message, self(), Message},
-
-  receive
-    {reply, Reply} ->
-      Reply
+print(Term) ->
+  case whereis(echop) of
+    undefined ->
+      error(not_registered);
+    Pid ->
+      Pid ! {message, self(), Term},
+      receive
+        {reply, Reply} ->
+          Reply
+      end
   end.
+
+stop() ->
+  echop ! stop.
 
 loop() ->
   receive
     {message, From, Message} ->
       From ! {reply, Message},
-      loop()
+      loop();
+    stop ->
+      exit(self(), normal)
   end.
 
